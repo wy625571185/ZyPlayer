@@ -1,0 +1,27 @@
+name: Auto Fork Repository
+
+on:
+  schedule:
+    # 每 2 天执行一次，这里使用 cron 表达式，在每天的 0 点 0 分检查，由于我们设置了每 2 天执行，所以实际每 2 天执行一次
+    - cron: '0 0 */2 * *'
+
+jobs:
+  fork-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fork Repository
+        env:
+          # 将之前获取的个人访问令牌添加到仓库的 Secrets 中，命名为 ACCESS_TOKEN
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          # 替换为你要 Fork 的源仓库的拥有者
+          SOURCE_OWNER: "Hiram-Wong"
+          # 替换为你要 Fork 的源仓库的名称
+          SOURCE_REPO: "ZyPlayer"
+        run: |
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$SOURCE_OWNER/$SOURCE_REPO/forks"
+
+
+
