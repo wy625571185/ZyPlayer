@@ -2,46 +2,39 @@ name: Auto Fork Repository
 
 on:
   schedule:
-    - cron: '0 0 */2 * *' # Every 2 days at midnight UTC
+    # 每 2 天运行一次（可以选择周五和周日运行，例如）
+    - cron: '0 0 */2 * *'
 
 jobs:
-  fork-repository:
+  fork-repo:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '14'
+      - name: Fork Repository
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          REPO_OWNER: Hiram-Wong
+          REPO_NAME: ZyPlayer
+        run: |
+          # 使用 GitHub API Fork 仓库
+          REPO_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/forks"
+          RESP=`curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" ${REPO_URL}`
+          echo "Response: $RESP"
 
-    - name: Install Octokit
-      run: npm install @octokit/rest
+          # 检查 Fork 是否成功
+          if echo "$RESP" | grep -q '"full_name"'; then
+            echo "Fork successful!"
+          else
+            echo "Fork failed!"
+            exit 1
+          fi
 
-    - name: Fork repository
-      env:
-        GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        REPO_OWNER: your-username-or-org
-        REPO_NAME: your-repo-name
-      run: |
-        node -e "
-          const { Octokit } = require('@octokit/rest');
-          const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-          async function forkRepo() {
-            try {
-              await octokit.repos.createFork({
-                owner: Hiram-Wong,
-                repo: ZyPlayer
-              });
-              console.log('Repository forked successfully!');
-            } catch (error) {
-              console.error('Error forking repository:', error);
-            }
-          }
-          forkRepo();
-        "
-
-
-
+      - name: Send Notification (Optional)
+        uses: appleboy/github-action-send文创微信通知@v1
+        if: ${{ success() }}
+        with:
+          webhook_url: ${{ secrets.WEBHOOK_URL }}
+          title: 'Fork Repository Successfully'
+          body: 'The repository has been successfully forked.'
