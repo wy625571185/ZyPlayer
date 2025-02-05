@@ -1,34 +1,47 @@
-name: Upstream Sync
-
-permissions:
-    contents: write
+name: Auto Fork Repository
 
 on:
-    schedule:
-        - cron: "0 0 * * *"
-    workflow_dispatch:
+  schedule:
+    - cron: '0 0 */2 * *' # Every 2 days at midnight UTC
 
 jobs:
-    sync_with_upstream:
-        name: Sync with Upstream
-        runs-on: ubuntu-latest
-        if: ${{ github.event.repository.fork }}
+  fork-repository:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout target repo
-              uses: actions/checkout@v3
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-            - name: Sync Upstream
-              uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
-              with:
-                  target_repo_token: ${{ secrets.ACCESS_TOKEN }}
-                  upstream_sync_repo: Hiram-Wong/ZyPlayer
-                  upstream_sync_branch: main
-                  target_sync_branch: main
-                  test_mode: false
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
 
-            - name: Check for Failure
-              if: failure()
-              run: |
-                  echo "[Error] Due to a change in the workflow file of the upstream repository, GitHub has automatically suspended the scheduled automatic update. You need to manually sync your fork."
-                  exit 1
+    - name: Install Octokit
+      run: npm install @octokit/rest
+
+    - name: Fork repository
+      env:
+        GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        REPO_OWNER: your-username-or-org
+        REPO_NAME: your-repo-name
+      run: |
+        node -e "
+          const { Octokit } = require('@octokit/rest');
+          const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+          async function forkRepo() {
+            try {
+              await octokit.repos.createFork({
+                owner: Hiram-Wong,
+                repo: ZyPlayer
+              });
+              console.log('Repository forked successfully!');
+            } catch (error) {
+              console.error('Error forking repository:', error);
+            }
+          }
+          forkRepo();
+        "
+
+
+
